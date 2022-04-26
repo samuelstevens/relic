@@ -1,0 +1,31 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "relic"
+authors = [{name = "Samuel Stevens", email = "samuel.robert.stevens@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License"]
+dynamic = ["version", "description"]
+dependencies = [
+  "preface >= 0.1.2",
+  'typing_extensions; python_version<"3.8"',
+]
+
+[project.urls]
+Home = "https://github.com/samuelstevens/relic"
+
+[tool.pytest.ini_options]
+addopts = "--cov relic --cov-report html"
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = 3.9
+
+[[tool.mypy.overrides]]
+module = 'matplotlib.*'
+ignore_missing_imports = true

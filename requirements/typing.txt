@@ -1,0 +1,3 @@
+mypy==0.942
+types-tabulate==0.8.7
+

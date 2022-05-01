@@ -50,7 +50,7 @@ def do_init(args: argparse.Namespace) -> None:
         cli.lib.logging.error(str(err))
 
 
-def main() -> int:
+def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
@@ -59,18 +59,18 @@ def main() -> int:
     if not hasattr(args, "func"):
         cli.lib.logging.error("No command specified.")
         parser.print_help()
-        return 1
+        return
 
     if args.func == do_init:
         do_init(args)
-        return 0
+        return
 
     # if we are doing anything besides initializing, get rid of root and don't let the subcommands use them.
     args.project = projects.Project(pathlib.Path(args.root))
     del args.root
 
-    return int(args.func(args))
+    sys.exit(int(args.func(args)))
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

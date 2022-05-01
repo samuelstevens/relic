@@ -11,8 +11,13 @@ classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 dependencies = [
   "preface >= 0.1.2",
+  "orjson >= 3.6.8",
+  "tabulate >= 0.8.9",
   'typing_extensions; python_version<"3.8"',
 ]
+
+[project.scripts]
+relic = "relic.__main__:main"
 
 [project.urls]
 Home = "https://github.com/samuelstevens/relic"

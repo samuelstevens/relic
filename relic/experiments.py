@@ -14,6 +14,9 @@ from . import disk, json, projects, types
 
 logger = logging.getLogger(__name__)
 
+# https://discuss.pytorch.org/t/received-0-items-of-ancdata-pytorch-0-4-0/19823
+torch.multiprocessing.set_sharing_strategy("file_system")  # type: ignore
+
 
 class Trial(Dict[str, Any]):
     def __eq__(self, o: object) -> bool:

@@ -69,6 +69,12 @@ class Or(Expr):
     def __call__(self, arg: RuntimeObj) -> bool:
         result = False
         for expr in self.exprs:
+            # Logical short-circuiting is required. We can't do
+            #     result = result or expr(arg)
+            # because we need to type-check expr(arg).
+            if result:
+                break
+
             expr_result = expr(arg)
             if not isinstance(expr_result, bool):
                 raise TypeError()
@@ -148,7 +154,7 @@ class Identifier(Expr):
     def __init__(self, ident: str) -> None:
         self.ident = ident
 
-    def __call__(self, arg: RuntimeObj) -> Union[str, float, bool]:
+    def __call__(self, arg: RuntimeObj) -> Union[str, number, bool, None]:
         if isinstance(arg, Experiment):
             if self.ident == "trialcount":
                 return len(arg)
@@ -159,7 +165,7 @@ class Identifier(Expr):
                     logging.warn(
                         "Did you mean 'experimenthash' instead of '%s'?", self.ident
                     )
-                return False
+                return None
             return preface.dict.get(arg.config, self.ident)  # type: ignore
         elif isinstance(arg, dict):
             if not preface.dict.contains(arg, self.ident):
@@ -232,7 +238,7 @@ class Like(Expr):
     def __init__(self, expr: Expr, regex: Expr) -> None:
         if not isinstance(regex, Regex):
             raise TypeError(
-                f"Expression {regex} must bea regular expression, not {type(regex)}!"
+                f"Expression {regex} must be a regular expression, not {type(regex)}!"
             )
 
         self.expr = expr
@@ -256,7 +262,7 @@ class Not(Expr):
         result = self.expr(arg)
 
         if not isinstance(result, bool):
-            raise TypeError()
+            raise TypeError(f"Cannot 'not' {result} of expression {self.expr}!")
 
         return not result
 
@@ -272,7 +278,8 @@ class Len(Expr):
         result = self.expr(arg)
 
         try:
-            # It's ok to call type: ignore because we want type errors to bubble up. The relic language is duck-typed.
+            # It's ok to call type: ignore because we want type
+            # errors to bubble up. The relic language is duck-typed.
             return len(result)  # type: ignore
         except TypeError:
             raise TypeError(

@@ -44,7 +44,7 @@ def isnumberlist(obj: object) -> TypeGuard[List[number]]:
     return True
 
 
-def isresult(obj: object) -> TypeGuard[Union[number, bool, str]]:
+def isresult(obj: object) -> TypeGuard[Union[number, bool, str, None]]:
     if isnumber(obj):
         return True
 
@@ -52,6 +52,9 @@ def isresult(obj: object) -> TypeGuard[Union[number, bool, str]]:
         return True
 
     if isinstance(obj, str):
+        return True
+
+    if obj is None:
         return True
 
     return False

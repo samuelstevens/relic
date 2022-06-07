@@ -104,7 +104,7 @@ class Table:
             self.rows = ordering(self.headers, self.rows)
 
     def __str__(self) -> str:
-        return tabulate(self.rows, headers=self.headers, floatfmt=".3f", missingval="-")
+        return tabulate(self.rows, headers=self.headers, floatfmt=".3g", missingval="-")
 
 
 class ConfigHandler:

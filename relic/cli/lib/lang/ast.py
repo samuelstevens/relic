@@ -98,6 +98,12 @@ class And(Expr):
     def __call__(self, arg: RuntimeObj) -> bool:
         result = True
         for expr in self.exprs:
+            # Logical short-circuiting is required. We can't do
+            #     result = result and expr(arg)
+            # because we need to type-check expr(arg).
+            if not result:
+                break
+
             expr_result = expr(arg)
             if not isinstance(expr_result, bool):
                 raise TypeError()

@@ -9,6 +9,8 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
+from typing_extensions import TypeGuard
+
 import preface
 from tabulate import tabulate
 
@@ -65,6 +67,17 @@ def add_parser(
         action="store_true",
     )
     parser.set_defaults(func=do_ls)
+
+
+def isboollist(obj: object) -> TypeGuard[List[bool]]:
+    if not isinstance(obj, list):
+        return False
+
+    for o in obj:
+        if not isinstance(o, bool):
+            return False
+
+    return True
 
 
 class Table:
@@ -155,9 +168,16 @@ class ShowHandler:
         if values:
             if lib.lang.ast.isnumberlist(values):
                 value = self.agg_fn(values)
+            elif isboollist(values):
+                true_count = len([val for val in values if val])
+                # false_count = len(values) - true_count
+                value = (
+                    f"{true_count}/{len(values)} ({true_count/len(values)*100:.0f}%)"
+                )
             elif all(a == b for a, b in zip(values, values[1:])):
                 value = f"{values[0]} (all)"
             else:
+
                 value = ",".join(map(str, values))
         else:
             result = self.field(experiment)

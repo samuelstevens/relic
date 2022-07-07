@@ -8,12 +8,92 @@ The file `relic/cli/lib/lang/ast.py` has the source code for all of these functi
 
 Name: or
 
-Arguments: List of expressions that evaluate to bools. 
+Arguments: List of expressions that evaluate to bools.
 
-Notes: Short-circuits evaluation. As soon as one argument evaluates to True, stops evaluating the others.
+Returns: True if any arguments are True, otherwise False.
+
+Notes: Short-circuits evaluation. As soon as one argument evaluates to True, stops evaluating the others. Related to [And](#and)
 
 Example: `(or (< model.size 100) (== model.size 100))`
 
 ## And
 
 Name: and
+
+Arguments: List of expressions that evaluate to bools. 
+
+Returns: True if every argument is True, otherwise False.
+
+Notes: Short-circuits evaluation. As soon as one argument evaluates to False, stops evaluating the others. Most of the time, you don't need `and` because arguments provided to `--experiments` (and other commands) are automatically "and-ed" together.
+
+Example: `(and finished succeeded)`
+
+## \</\>/\<=/\>= (Numerical Comparisons)
+
+Name: `<` `>` `<=` `>=`
+
+Arguments: two expressions that both evaluate to numbers.
+
+Returns: True or False depending on the comparison.
+
+Notes: The first argument goes on the left side of the function "name". So `(< 4 5)` checks whether 4 < 5.
+
+Example: `(<= model.size 100)`
+
+## == (Equals)
+
+Name: ==
+
+Arguments: two expressions that evaluate to any type.
+
+Returns: True if the expressions are equal, False otherwise.
+
+Notes: There are no type restrictions, but no type coercing happens either.
+
+Example: `(== model.name 'gpt2')`
+
+## ~ (Like)
+
+Name: `like` or `~`
+
+Arguments: An expression that evaluates to any type and a regular expression.
+
+Returns: True if there is at least one match, False otherwise.
+
+Notes: The first argument will be converted to a string using Python's `str` function. So you can write regular expressions to match against lists, dictionaries, etc. You just have to be aware of what the resulting string will look like.
+
+Example: `(~ model.name |gpt2(:?-.*)?|)`
+
+## Not
+
+Name: `not`
+
+Arguments: One expression that evaluates to a bool.
+
+Returns: The inverse of the expression (True if False, False if True).
+
+Example: `(not succeeded)`
+
+## Length
+
+Name: len
+
+Arguments: One argument that evaluates to any expression with a length in Python. This includes lists, dictionaries, and strings.
+
+Returns: The argument's length.
+
+Notes: If the expression does not have a length, it will throw a type error.
+
+Example: `(len training_losses)`
+
+## Sum
+
+Name: sum
+
+Arguments: One argument that is list-like and can be summed. 
+
+Returns: The argument's sum.
+
+Notes: This function evaluates its argument, then calls the Python built-in `sum()`. If the evaluated argument causes a type-error, then this throws an error as well. I mostly used this with `/` to calculate means and use them in my queries.
+
+

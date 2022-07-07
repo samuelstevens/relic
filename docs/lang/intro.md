@@ -6,9 +6,9 @@ It tries to be regular so that you can compose it in ways that were not planned 
 
 At a high level there are three main components:
 
-1. [Literals](docs/lang/literals) like `None`, `0.0001`, and `'gpt2'`.
-2. [Dictionary getters](docs/lang/dictionary-getters) like `training.clipping.value` and `succeeded`
-3. [Functions](docs/lang/functions) like `all`, `and`, and `like`.
+1. [Literals](literals) like `None`, `0.0001`, and `'gpt2'`.
+2. [Dictionary getters](dictionary-getters) like `training.clipping.value` and `succeeded`
+3. [Functions](functions) like `all`, `and`, and `like`.
 
 These three components form expressions.
 I will give some examples of expressions and how they evaluate.

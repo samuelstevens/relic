@@ -40,7 +40,7 @@ When I added clipping, 3/3 of trials succeeded.
 
 The real power of the `relic` command is the filtering you can do to further drill down into your experimental results without needing to start a Jupyter notebook (which is also well-supported by relic).
 
-The filtering language is explained in more detail in [the language docs](docs/lang/intro), but I will show a couple examples to (hopefully) convince you of its utility.
+The filtering language is explained in more detail in [the language docs](lang/intro.md), but I will show a couple examples to (hopefully) convince you of its utility.
 
 1. Show experiments with a learning rate in a range and a given clipping value:
 
@@ -60,4 +60,4 @@ relic ls --experiments "(any (and finished (not converged)))"
 relic ls --experiments "(all (not converged))" "(like data.source |images/.*/birds|)"
 ```
 
-Again, the full language is explained in [the language docs](docs/lang/intro).
+Again, the full language is explained in [the language docs](lang/intro.md).

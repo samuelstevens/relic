@@ -110,7 +110,7 @@ def merge_source(
             continue
 
         # experiment exists in destination_dir
-        dst_exp = experiments.Experiment.load(src_exp.hash, dst_proj.root)
+        dst_exp = experiments.Experiment.load(dst_proj.root, src_exp.hash)
 
         if dst_exp.config != src_exp.config:
             msg = f"Source experiment {src_exp} has the same hash as destination experiment {dst_exp} but has a different config! Something is very broken!"

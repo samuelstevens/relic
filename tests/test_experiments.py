@@ -10,31 +10,32 @@ from relic import experiments, projects
 def test_smoke() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiments.Experiment.new(config={}, root=root)
+        project = projects.Project.new(root)
+        experiments.Experiment.new(config={}, root=project.root)
 
 
 def test_experiment_saves_on_new() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
-        assert experiment.exists(root, experiment.hash)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
 
 def test_hash_from_filepath() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         assert (
-            experiment.hash_from_filepath(experiment.file(root, experiment.hash))
+            experiment.hash_from_dir(experiment.directory(root, experiment.hash))
             == experiment.hash
         )
 
         assert (
-            experiment.hash_from_filepath(str(experiment.file(root, experiment.hash)))
+            experiment.hash_from_dir(str(experiment.directory(root, experiment.hash)))
             == experiment.hash
         )
 
@@ -42,10 +43,13 @@ def test_hash_from_filepath() -> None:
 def test_load_from_filepath() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
-        experiment = experiments.Experiment.new(config={}, root=root)
-
-        experiment_from_file = experiments.Experiment.load(experiment.hash, root)
+        experiment_from_file = experiments.Experiment.load(
+            project.root, experiment.hash
+        )
         assert experiment_from_file == experiment
 
 
@@ -55,29 +59,29 @@ def test_load_missing_throws_error() -> None:
 
         hash = experiments.Experiment.hash_from_config({})
 
-        with pytest.raises(FileNotFoundError):
-            experiments.Experiment.load(hash, root)
+        with pytest.raises(experiments.Experiment.LoadError):
+            experiments.Experiment.load(root, hash)
 
 
 def test_load_corrupted_throws_error() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(experiment.root, experiment.hash)
 
-        experiment = experiments.Experiment.new(config={}, root=root)
-
-        with open(experiment.file(experiment.root, experiment.hash), "w"):
-            pass
+        experiment.config_path(experiment.root, experiment.hash).unlink()
 
         with pytest.raises(experiments.Experiment.LoadError):
-            experiments.Experiment.load(experiment.hash, root)
+            experiments.Experiment.load(root, experiment.hash)
 
 
 def test_delete_experiment() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
-        assert experiment.exists(root, experiment.hash)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         experiment.delete()
         assert not experiment.exists(root, experiment.hash)
@@ -86,36 +90,44 @@ def test_delete_experiment() -> None:
 def test_add_trial_smoke() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
-        experiment = experiments.Experiment.new(config={}, root=root)
         experiment.add_trial({}, None)
 
 
 def test_add_trial_writes_to_disk() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
-        experiment = experiments.Experiment.new(config={}, root=root)
         experiment.add_trial({}, None)
-        assert experiment.exists(root, experiment.hash)
+        assert experiment.exists(experiment.root, experiment.hash)
 
-        experiment_from_file = experiments.Experiment.load(experiment.hash, root)
+        experiment_from_file = experiments.Experiment.load(
+            project.root, experiment.hash
+        )
         assert experiment_from_file == experiment
 
 
 def test_add_trial_affects_length() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
-        assert experiment.exists(root, experiment.hash)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         experiment.add_trial({}, None)
         experiment.add_trial({}, None)
         experiment.add_trial({}, None)
         assert len(experiment) == 3
 
-        experiment_from_file = experiments.Experiment.load(experiment.hash, root)
+        experiment_from_file = experiments.Experiment.load(
+            project.root, experiment.hash
+        )
         assert len(experiment_from_file) == 3
 
 
@@ -180,9 +192,9 @@ def test_add_trial_too_far() -> None:
 def test_delete_trials_smoke() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
-        assert experiment.exists(root, experiment.hash)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         experiment.add_trial({}, None)
         assert len(experiment) == 1
@@ -198,9 +210,9 @@ def test_delete_trials_smoke() -> None:
 def test_delete_trials_writes_to_disk() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
-        assert experiment.exists(root, experiment.hash)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         experiment.add_trial({}, None)
         assert len(experiment) == 1
@@ -210,13 +222,13 @@ def test_delete_trials_writes_to_disk() -> None:
         assert len(experiment) == 3
 
         experiment_from_file_before_delete = experiments.Experiment.load(
-            experiment.hash, root
+            experiment.root, experiment.hash
         )
 
         experiment.delete_trials()
 
         experiment_from_file_with_no_trials = experiments.Experiment.load(
-            experiment.hash, root
+            experiment.root, experiment.hash
         )
 
         assert len(experiment) == 0
@@ -227,8 +239,9 @@ def test_delete_trials_writes_to_disk() -> None:
 def test_update_trial_smoke() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         experiment.add_trial({}, None)
         assert len(experiment) == 1
@@ -242,8 +255,9 @@ def test_update_trial_smoke() -> None:
 def test_update_trial_adds_instance() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         experiment.add_trial({}, None)
         assert len(experiment) == 1
@@ -257,8 +271,9 @@ def test_update_trial_adds_instance() -> None:
 def test_update_trial_modifies_disk() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
-        experiment = experiments.Experiment.new(config={}, root=root)
+        project = projects.Project.new(root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         experiment.add_trial({}, None)
         assert len(experiment) == 1
@@ -270,7 +285,9 @@ def test_update_trial_modifies_disk() -> None:
         assert experiment[0] == expected
         assert actual == expected
 
-        experiment_from_file = experiments.Experiment.load(experiment.hash, root)
+        experiment_from_file = experiments.Experiment.load(
+            project.root, experiment.hash
+        )
         assert experiment_from_file == experiment
         assert experiment_from_file[0] == {**new_trial, "instance": 0}
 
@@ -279,9 +296,9 @@ def test_load_all() -> None:
 
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
-
         project = projects.Project.new(root)
-        experiment = experiments.Experiment.new({}, project.root)
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
         exps = list(experiments.load_all(project))
 

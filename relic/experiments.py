@@ -42,18 +42,25 @@ class Trial(Dict[str, Any]):
     def __ne__(self, o: object) -> bool:
         return not (self == o)
 
+    @property
+    def instance(self) -> int:
+        instance = self["instance"]
+        assert isinstance(instance, int)
+        return instance
+
 
 @dataclasses.dataclass
 class Experiment:
-    hash: str
     root: pathlib.Path
+    hash: str
     config: types.Config
     trials: List[Trial]
 
     def __post_init__(self) -> None:
         if not self.trials and self.exists(self.root, self.hash):
-            obj = disk.load(self.file(self.root, self.hash))
-            assert obj["trials"] == [], "logic error in relic!"
+            assert not list(
+                self.trial_dir(self.root, self.hash).iterdir()
+            ), "logic error in relic!"
         else:
             for i, trial in enumerate(self.trials):
                 if "instance" not in trial:
@@ -67,10 +74,10 @@ class Experiment:
     def new(cls, config: types.Config, root: pathlib.Path) -> "Experiment":
         hash = cls.hash_from_config(config)
 
-        try:
-            return cls.load(hash, root)
-        except OSError:
-            instance = cls(hash, root, config, [])
+        if cls.exists(root, hash):
+            return cls.load(root, hash)
+        else:
+            instance = cls(root, hash, config, [])
             instance.save()
             return instance
 
@@ -79,34 +86,43 @@ class Experiment:
         file: types.Path
         message: str
 
-        def __init__(self, err: Exception, file: types.Path):
+        def __init__(self, err: Exception, directory: types.Path):
             self.err = err
-            self.file = file
-            self.message = f"File {file} is corrupted: {err}"
+            self.directory = directory
+            self.message = f"Experiment directory {directory} is corrupted: {err}"
 
         def __str__(self) -> str:
             return self.message
 
     @classmethod
-    def load(cls, hash: str, root: pathlib.Path) -> "Experiment":
+    def load(cls, root: pathlib.Path, hash: str) -> "Experiment":
         try:
-            obj = disk.load(cls.file(root, hash))
-        except EOFError as err:
-            raise cls.LoadError(err, cls.file(root, hash))
+            config = disk.load(cls.config_path(root, hash))
 
-        trials = [Trial(t) for t in obj["trials"]]
-        return cls(hash, root, obj["config"], trials)
+            trials: List[Trial] = []
+            path = cls.trial_path(root, hash, len(trials))
+            while path.is_file():
+                trials.append(disk.load(path))
+                path = cls.trial_path(root, hash, len(trials))
 
-    def asdict(self) -> Dict[str, Any]:
-        return {"config": self.config, "trials": self.trials}
+        except (EOFError, FileNotFoundError) as err:
+            raise cls.LoadError(err, cls.directory(root, hash))
+
+        return cls(root, hash, config, trials)
 
     def save(self) -> None:
-        disk.dump(self.file(self.root, self.hash), self.asdict())
+        self.directory(self.root, self.hash).mkdir(parents=False, exist_ok=True)
+
+        # Save config
+        disk.dump(self.config_path(self.root, self.hash), self.config)
+
+        # Save trials
+        self.trial_dir(self.root, self.hash).mkdir(parents=False, exist_ok=True)
+        for trial in self.trials:
+            disk.dump(self.trial_path(self.root, self.hash, trial.instance), trial)
 
     def delete(self) -> None:
-        os.remove(self.file(self.root, self.hash))
-        for i, _ in enumerate(self):
-            self._delete_model(i)
+        shutil.rmtree(self.directory(self.root, self.hash))
 
     def _delete_model(self, trial: int) -> None:
         try:
@@ -131,19 +147,38 @@ class Experiment:
         return new_model_path
 
     @staticmethod
-    def file(root: pathlib.Path, hash: str) -> pathlib.Path:
-        return root / (hash + ".relic")
-
-    @staticmethod
-    def hash_from_filepath(filepath: types.Path) -> str:
+    def hash_from_dir(filepath: types.Path) -> str:
         if not isinstance(filepath, pathlib.Path):
             filepath = pathlib.Path(filepath)
-
         return filepath.stem
+
+    # region STATIC METHODS
+    # These methods are only attached to the class for organizational purposes.
+    # They are not used with instances EVER.
 
     @staticmethod
     def hash_from_config(config: types.Config) -> str:
         return hashlib.sha1(json.dumpb(config)).hexdigest()
+
+    @staticmethod
+    def directory(root: pathlib.Path, hash: str) -> pathlib.Path:
+        return root / hash
+
+    # These behave like a static method; they just need a reference to another
+    # static method.
+    @classmethod
+    def config_path(cls, root: pathlib.Path, hash: str) -> pathlib.Path:
+        return cls.directory(root, hash) / "config"
+
+    @classmethod
+    def trial_dir(cls, root: pathlib.Path, hash: str) -> pathlib.Path:
+        return cls.directory(root, hash) / "trials"
+
+    @classmethod
+    def trial_path(cls, root: pathlib.Path, hash: str, trial: int) -> pathlib.Path:
+        return cls.trial_dir(root, hash) / f"{trial}.trial"
+
+    # endregion
 
     def add_trial(
         self, trial: Dict[str, Any], model_path: Optional[types.Path] = None
@@ -161,6 +196,7 @@ class Experiment:
     def delete_trials(self, starting_from: int = 0) -> None:
         for i in range(starting_from, len(self)):
             self._delete_model(i)
+            self.trial_path(self.root, self.hash, i).unlink()
 
         self.trials = self.trials[:starting_from]
 
@@ -200,7 +236,7 @@ class Experiment:
 
     @classmethod
     def exists(cls, root: pathlib.Path, hash: str) -> bool:
-        return os.path.isfile(cls.file(root, hash))
+        return cls.directory(root, hash).is_dir()
 
     def model_path(self, trial: int) -> pathlib.Path:
         return self.root / "models" / self.hash / f"trial_{trial}.bin"
@@ -240,42 +276,62 @@ def with_prefix(prefix: str, root: types.Path) -> Iterator[Experiment]:
         root = pathlib.Path(root)
 
     for file in os.listdir(root):
-        if Experiment.hash_from_filepath(file).startswith(prefix):
-            yield Experiment.load(Experiment.hash_from_filepath(file), root)
+        hash = Experiment.hash_from_dir(file)
+        if hash.startswith(prefix):
+            yield Experiment.load(root, hash)
 
 
-def _load_experiment_safely(
-    file: pathlib.Path, root: pathlib.Path
-) -> Optional[Experiment]:
+def _load_config_safely(root: pathlib.Path, hash: str) -> types.Config:
+    return disk.load(Experiment.config_path(root, hash))  # type: ignore
+
+
+def _load_experiment_safely(root: pathlib.Path, hash: str) -> Optional[Experiment]:
     try:
-        return Experiment.load(Experiment.hash_from_filepath(file), root)
-    except Experiment.LoadError as err:
-        if os.path.getsize(err.file) == 0:
-            return None
-        raise err
+        return Experiment.load(root, hash)
+    except Experiment.LoadError:
+        return None
 
 
 def load_all(
     project: projects.Project,
     experiment_fn: types.FilterFn[Experiment] = lambda _: True,
+    needs_trials: bool = True,
 ) -> Iterator[Experiment]:
     """
     Generates an interator of experiments matching a filter function (experiment_fn).
     """
     assert callable(experiment_fn)
 
-    path_and_roots = [(file, project.root) for file in project.experiment_files()]
-
     # Can't use context manager (with pool as ...) because of this issue with pytest coverage:
     # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html#if-you-use-multiprocessing-pool
     pool = multiprocessing.Pool()
     try:
-        experiments = pool.starmap(
-            _load_experiment_safely, path_and_roots, chunksize=32
-        )
-        for experiment in experiments:
-            if experiment is not None and experiment_fn(experiment):
-                yield experiment
+        if needs_trials:
+            exp_args = [(project.root, hash) for hash in project.hashes()]
+            exps = pool.starmap(_load_experiment_safely, exp_args, chunksize=32)
+            for exp in exps:
+                if exp is None or not experiment_fn(exp):
+                    continue
+
+                yield exp
+
+        else:
+            config_args = [(project.root, hash) for hash in project.hashes()]
+            configs = pool.starmap(_load_config_safely, config_args, chunksize=32)
+
+            exp_args = []
+            for config in configs:
+                hash = Experiment.hash_from_config(config)
+                if not experiment_fn(Experiment(project.root, hash, config, [])):
+                    continue
+                exp_args.append((project.root, hash))
+
+            exps = pool.starmap(_load_experiment_safely, exp_args, chunksize=32)
+            for exp in exps:
+                if exp is None:
+                    continue
+
+                yield exp
     finally:
         pool.close()
         pool.join()

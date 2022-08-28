@@ -8,16 +8,11 @@ A project is stored on disk in the relics/project.json file.
 import logging
 import os
 import pathlib
-import shutil
-from typing import Iterator, Set
+from typing import Iterator
 
 from . import json
 
 logger = logging.getLogger(__name__)
-
-
-def model_dir(root: pathlib.Path) -> pathlib.Path:
-    return root / "models"
 
 
 def project_file(root: pathlib.Path) -> pathlib.Path:
@@ -47,27 +42,13 @@ class Project:
             self._versions,
         )
 
-    def add_version(self, to_keep: Set[str]) -> None:
+    def add_version(self) -> None:
         self._versions += 1
 
         new_dir = self._root / f"v{self._versions}"
 
         new_dir.mkdir(exist_ok=True)
         (new_dir / ".keep").touch()
-
-        if not to_keep:
-            return
-
-        for file in self.experiment_files():
-            for hash in to_keep:
-                if file.stem.startswith(hash):
-                    logger.debug(
-                        "Keeping %s from v%s in v%s",
-                        file,
-                        self._current,
-                        self._versions,
-                    )
-                    shutil.copy2(file, new_dir / file.name)
 
     def use_version(self, version: int) -> None:
         if version > self._versions:
@@ -87,8 +68,6 @@ class Project:
 
     @classmethod
     def new(cls, root: pathlib.Path) -> "Project":
-        model_dir(root).mkdir(parents=True, exist_ok=True)
-
         if project_file(root).exists():
             raise ValueError("Not creating new project file; file already exists!")
 
@@ -97,23 +76,20 @@ class Project:
 
         return cls(root)
 
-    def experiment_files(self) -> Iterator[pathlib.Path]:
+    def hashes(self) -> Iterator[str]:
         for file in os.listdir(self.root):
             path = self.root / file
 
-            if not os.path.isfile(path):
+            if not os.path.isdir(path):
                 continue
 
-            if path.suffix != ".relic":
-                continue
-
-            yield path
+            yield path.stem
 
     @property
     def description(self) -> str:
         # TODO: if versions_str is really long, I should condense it somehow.
         versions_str = ", ".join("v" + str(i + 1) for i in range(self._versions))
-        experiment_count = len(list(self.experiment_files()))
+        experiment_count = len(list(self.hashes()))
 
         lines = [
             f"* root: {self._root}/",

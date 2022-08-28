@@ -9,10 +9,9 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
-from typing_extensions import TypeGuard
-
 import preface
 from tabulate import tabulate
+from typing_extensions import TypeGuard
 
 from .. import experiments, types
 from . import lib

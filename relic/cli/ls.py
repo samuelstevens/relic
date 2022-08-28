@@ -335,9 +335,9 @@ def make_table(
 
 
 def make_table_from_args(args: argparse.Namespace) -> Optional[Table]:
-    filter_fn = lib.shared.make_experiment_fn(args.experiments)
+    filter_fn, needs_trials = lib.shared.make_experiment_fn(args.experiments)
 
-    exps = list(experiments.load_all(args.project, filter_fn))
+    exps = list(experiments.load_all(args.project, filter_fn, needs_trials))
 
     if not args.all:
         # Remove experiments with 0 trials

@@ -57,18 +57,13 @@ class Experiment:
     trials: List[Trial]
 
     def __post_init__(self) -> None:
-        if not self.trials and self.exists(self.root, self.hash):
-            assert not list(
-                self.trial_dir(self.root, self.hash).iterdir()
-            ), "logic error in relic!"
-        else:
-            for i, trial in enumerate(self.trials):
-                if "instance" not in trial:
-                    trial["instance"] = i
-                else:
-                    assert (
-                        trial["instance"] == i
-                    ), f"For experiment {self}, {trial['instance']} != {i}"
+        for i, trial in enumerate(self.trials):
+            if "instance" not in trial:
+                trial["instance"] = i
+            else:
+                assert (
+                    trial["instance"] == i
+                ), f"For experiment {self}, {trial['instance']} != {i}"
 
     @classmethod
     def new(cls, config: types.Config, root: pathlib.Path) -> "Experiment":

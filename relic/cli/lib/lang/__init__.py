@@ -2,7 +2,7 @@ from .... import experiments, types
 from . import ast, lexing, parsing
 
 
-def compile(code: str) -> ast.RuntimeFn:
+def compile(code: str) -> ast.Expr:
     """
     Compiles code into a function.
 
@@ -14,12 +14,10 @@ def compile(code: str) -> ast.RuntimeFn:
     return chunk
 
 
-def experiment(code: str) -> types.FilterFn[experiments.Experiment]:
-    chunk = compile(code)
-
+def experiment(fn: ast.RuntimeFn) -> types.FilterFn[experiments.Experiment]:
     def execute(e: experiments.Experiment) -> bool:
         try:
-            return bool(chunk(e))
+            return bool(fn(e))
         except ast.RuntimeTypeError as err:
             print(err)
             return False
@@ -27,10 +25,31 @@ def experiment(code: str) -> types.FilterFn[experiments.Experiment]:
     return execute
 
 
-def trial(code: str) -> types.FilterFn[experiments.Trial]:
-    chunk = compile(code)
-
+def trial(fn: ast.RuntimeFn) -> types.FilterFn[experiments.Trial]:
     def execute(trial: experiments.Trial) -> bool:
-        return bool(chunk(trial))
+        return bool(fn(trial))
 
     return execute
+
+
+def needs_trials(expr: object) -> bool:
+    if isinstance(expr, list):
+        for value in expr:
+            if needs_trials(value):
+                return True
+
+    if not isinstance(expr, ast.Expr):
+        return False
+
+    if (
+        isinstance(expr, ast.Any)
+        or isinstance(expr, ast.All)
+        or (isinstance(expr, ast.Identifier) and expr.ident == "trialcount")
+    ):
+        return True
+
+    for value in expr.__dict__.values():
+        if needs_trials(value):
+            return True
+
+    return False

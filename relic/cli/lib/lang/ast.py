@@ -9,6 +9,9 @@ from typing_extensions import TypeGuard
 from ....experiments import Experiment, Trial
 from .. import logging
 
+TRIALCOUNT = "trialcount"
+EXPERIMENTHASH = "experimenthash"
+
 RuntimeObj = Union[Trial, Experiment, float, int, bool, str, None]
 
 RuntimeFn = Callable[[RuntimeObj], RuntimeObj]
@@ -165,14 +168,14 @@ class Identifier(Expr):
 
     def __call__(self, arg: RuntimeObj) -> Union[str, number, bool, None]:
         if isinstance(arg, Experiment):
-            if self.ident == "trialcount":
+            if self.ident == TRIALCOUNT:
                 return len(arg)
-            if self.ident == "experimenthash":
+            if self.ident == EXPERIMENTHASH:
                 return arg.hash
             if not preface.dict.contains(arg.config, self.ident):
                 if "experiment" in self.ident:
                     logging.warn(
-                        "Did you mean 'experimenthash' instead of '%s'?", self.ident
+                        "Did you mean '%s' instead of '%s'?", EXPERIMENTHASH, self.ident
                     )
                 return None
             return preface.dict.get(arg.config, self.ident)  # type: ignore

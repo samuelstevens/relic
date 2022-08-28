@@ -5,7 +5,7 @@ from relic import cli, experiments, projects
 
 
 def test_find_natural_n_experiments() -> None:
-    filter_fn = cli.lib.shared.make_experiment_fn(
+    filter_fn, needs_trials = cli.lib.shared.make_experiment_fn(
         ["(== training.batch_size 16)", "(== training.optimizer 'AdamW')"]
     )
     with tempfile.TemporaryDirectory() as root_name:
@@ -38,6 +38,6 @@ def test_find_natural_n_experiments() -> None:
             ]
         )
 
-        actual_exps = set(experiments.load_all(project, filter_fn))
+        actual_exps = set(experiments.load_all(project, filter_fn, needs_trials))
 
         assert actual_exps == expected_exps

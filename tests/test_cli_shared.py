@@ -5,7 +5,7 @@ from relic import cli, experiments, projects
 
 
 def test_make_experiment_fn1() -> None:
-    filter_fn = cli.lib.shared.make_experiment_fn([])
+    filter_fn, needs_trials = cli.lib.shared.make_experiment_fn([])
 
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
@@ -14,13 +14,13 @@ def test_make_experiment_fn1() -> None:
         experiment = experiments.Experiment.new({}, project.root)
         experiment.add_trial({})
 
-        exps = list(experiments.load_all(project, filter_fn))
+        exps = list(experiments.load_all(project, filter_fn, needs_trials))
 
         assert len(exps) == 1
 
 
 def test_make_experiment_fn2() -> None:
-    filter_fn = cli.lib.shared.make_experiment_fn(
+    filter_fn, needs_trials = cli.lib.shared.make_experiment_fn(
         ["(any (and (== succeeded False) (== finished True)))"]
     )
 
@@ -31,6 +31,6 @@ def test_make_experiment_fn2() -> None:
         experiment = experiments.Experiment.new({}, project.root)
         experiment.add_trial({})
 
-        exps = list(experiments.load_all(project, filter_fn))
+        exps = list(experiments.load_all(project, filter_fn, needs_trials))
 
         assert len(exps) == 0

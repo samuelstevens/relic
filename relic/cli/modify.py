@@ -154,8 +154,8 @@ def print_help(parser: argparse.ArgumentParser) -> int:
 
 
 def load_experiments(args: argparse.Namespace) -> Iterator[experiments.Experiment]:
-    filter_fn = shared.make_experiment_fn(args.experiments)
-    return experiments.load_all(args.project, filter_fn)
+    filter_fn, needs_trials = shared.make_experiment_fn(args.experiments)
+    return experiments.load_all(args.project, filter_fn, needs_trials)
 
 
 def _update_experiment(

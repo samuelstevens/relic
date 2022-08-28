@@ -38,8 +38,8 @@ def do_delete(args: argparse.Namespace) -> int:
 
     # Delete all experiments specified by --experiments
     if args.experiments:
-        exp_fn = shared.make_experiment_fn(args.experiments)
-        for exp in experiments.load_all(args.project, experiment_fn=exp_fn):
+        exp_fn, needs_trials = shared.make_experiment_fn(args.experiments)
+        for exp in experiments.load_all(args.project, exp_fn, needs_trials):
             exp.delete()
 
     return 0

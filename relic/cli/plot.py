@@ -40,9 +40,9 @@ def add_parser(
 
 
 def do_plot(args: argparse.Namespace) -> int:
-    filter_fn = shared.make_experiment_fn(args.experiments)
+    filter_fn, needs_trials = shared.make_experiment_fn(args.experiments)
 
-    exps = list(experiments.load_all(args.project, filter_fn))
+    exps = list(experiments.load_all(args.project, filter_fn, needs_trials))
 
     # filter experiments with 0 trials
     exps = [e for e in exps if len(e) > 0]

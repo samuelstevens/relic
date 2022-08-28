@@ -16,9 +16,9 @@ def add_parser(
 
 
 def do_cat(args: argparse.Namespace) -> int:
-    filter_fn = lib.shared.make_experiment_fn(args.experiments)
+    filter_fn, needs_trials = lib.shared.make_experiment_fn(args.experiments)
 
-    exps = list(experiments.load_all(args.project, filter_fn))
+    exps = list(experiments.load_all(args.project, filter_fn, needs_trials))
 
     if len(exps) > 1:
         lib.logging.warn(

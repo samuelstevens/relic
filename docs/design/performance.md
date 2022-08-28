@@ -79,10 +79,10 @@ mv v1 v1-old
 for hash in v1-old:
     mkdir v1/hash
     mkdir v1/hash/trials
-    mv v1/models/hash v1/hash/models
+    cp -r v1/models/hash v1/hash/models
 
     for model in v1/hash/models:
-        mv model MODEL.model
+        cp model MODEL.model
 
     config, trials = read v1-old/hash
 

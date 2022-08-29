@@ -42,12 +42,14 @@ def add_init_parser(
     parser.set_defaults(func=do_init)
 
 
-def do_init(args: argparse.Namespace) -> None:
+def do_init(args: argparse.Namespace) -> int:
     root = pathlib.Path(args.root)
     try:
         projects.Project.new(root)
+        return 0
     except Exception as err:
         cli.lib.logging.error(str(err))
+        return getattr(err, "errno", 1)
 
 
 def main() -> None:
@@ -62,14 +64,14 @@ def main() -> None:
         return
 
     if args.func == do_init:
-        do_init(args)
-        return
+        exitcode = do_init(args)
+    else:
+        # if we are doing anything besides initializing, get rid of root and don't let the subcommands use them.
+        args.project = projects.Project(pathlib.Path(args.root))
+        del args.root
+        exitcode = args.func(args)
 
-    # if we are doing anything besides initializing, get rid of root and don't let the subcommands use them.
-    args.project = projects.Project(pathlib.Path(args.root))
-    del args.root
-
-    sys.exit(int(args.func(args)))
+    sys.exit(int(exitcode))
 
 
 if __name__ == "__main__":

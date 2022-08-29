@@ -25,13 +25,14 @@ def new_experiment(
 def load_experiments(
     root: Optional[pathlib.Path] = None,
     filter_fn: types.FilterFn[Experiment] = lambda _: True,
+    needs_trials: bool = True,
 ) -> Iterator[Experiment]:
     if root is None:
         root = cli.DEFAULT_ROOT
 
     project = projects.Project(root)
 
-    return experiments.load_all(project, filter_fn)
+    return experiments.load_all(project, filter_fn, needs_trials)
 
 
 __all__ = ["new_experiment", "load_experiments", "Experiment", "Trial"]

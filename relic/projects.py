@@ -80,9 +80,6 @@ class Project:
         for file in os.listdir(self.root):
             path = self.root / file
 
-            if not os.path.isdir(path):
-                continue
-
             yield path.stem
 
     @property

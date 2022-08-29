@@ -234,7 +234,7 @@ class Experiment:
         return cls.directory(root, hash).is_dir()
 
     def model_path(self, trial: int) -> pathlib.Path:
-        return self.root / "models" / self.hash / f"trial_{trial}.bin"
+        return self.root / self.hash / "models" / f"{trial}.model"
 
     def model_exists(self, trial: int) -> bool:
         return os.path.isfile(self.model_path(trial))
@@ -302,16 +302,11 @@ def load_all(
     pool = multiprocessing.Pool()
     try:
         if needs_trials:
+            # Need to load every experiment, including trials.
             exp_args = [(project.root, hash) for hash in project.hashes()]
-            exps = pool.starmap(_load_experiment_safely, exp_args, chunksize=32)
-            for exp in exps:
-                if exp is None or not experiment_fn(exp):
-                    continue
-
-                yield exp
-
         else:
-            config_args = [(project.root, hash) for hash in project.hashes()]
+            # Load every config, filter configs, then load experiments (with trials)
+            config_args = ((project.root, hash) for hash in project.hashes())
             configs = pool.starmap(_load_config_safely, config_args, chunksize=32)
 
             exp_args = []
@@ -321,12 +316,12 @@ def load_all(
                     continue
                 exp_args.append((project.root, hash))
 
-            exps = pool.starmap(_load_experiment_safely, exp_args, chunksize=32)
-            for exp in exps:
-                if exp is None:
-                    continue
+        exps = pool.starmap(_load_experiment_safely, exp_args, chunksize=32)
+        for exp in exps:
+            if exp is None or not experiment_fn(exp):
+                continue
 
-                yield exp
+            yield exp
     finally:
         pool.close()
         pool.join()

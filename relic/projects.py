@@ -68,10 +68,15 @@ class Project:
 
     @classmethod
     def new(cls, root: pathlib.Path) -> "Project":
+        # Make root directory
+        root.mkdir(exist_ok=True)
+
+        # Add project.json
         if project_file(root).exists():
             raise ValueError("Not creating new project file; file already exists!")
-
         json.dump(project_file(root), {"current": 1})
+
+        # Make a v1 directory
         (root / "v1").mkdir(exist_ok=True)
 
         return cls(root)

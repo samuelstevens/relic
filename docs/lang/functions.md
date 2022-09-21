@@ -27,7 +27,7 @@ Arguments: List of expressions that evaluate to bools.
 
 Returns: True if every argument is True, otherwise False.
 
-Notes: Short-circuits evaluation. As soon as one argument evaluates to False, stops evaluating the others. Most of the time, you don't need `and` because arguments provided to `--experiments` (and other commands) are automatically "and-ed" together.Related to [Or](#or).
+Notes: Short-circuits evaluation. As soon as one argument evaluates to False, stops evaluating the others. Most of the time, you don't need `and` because arguments provided to `--experiments` (and other commands) are automatically "and-ed" together. Related to [Or](#or).
 
 Example: `(and finished succeeded)`
 

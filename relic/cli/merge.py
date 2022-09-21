@@ -93,8 +93,18 @@ def do_merge(args: argparse.Namespace) -> int:
     conflict_strategy: ConflictStrategy = args.conflicts
 
     for source in args.sources:
+        try:
+            src_project = projects.Project(pathlib.Path(source))
+        except FileNotFoundError as err:
+            logging.warn(
+                "Skipping source because of missing file. [source: %s, file: %s]",
+                source,
+                err.filename,
+            )
+            continue
+
         merge_source_proj(
-            projects.Project(pathlib.Path(source)),
+            src_project,
             dst_project,
             conflict_strategy,
         )

@@ -11,12 +11,6 @@ def add_parser(
         action="store_true",
     )
     parser.add_argument(
-        "--keep",
-        help="Experiments to keep for your new version (must be used with --new)",
-        nargs="+",
-        default=[],
-    )
-    parser.add_argument(
         "--use",
         help="Use a particular version of your project",
         type=int,
@@ -26,7 +20,7 @@ def add_parser(
 
 def do_version(args: argparse.Namespace) -> int:
     if args.new:
-        args.project.add_version(args.keep)
+        args.project.add_version()
     elif args.use:
         assert isinstance(args.use, int)
         args.project.use_version(args.use)

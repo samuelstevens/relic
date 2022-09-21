@@ -12,9 +12,27 @@ import torch
 from . import types
 
 
+def move(obj, device):
+    if isinstance(obj, list):
+        return [move(t, device) for t in obj]
+
+    if isinstance(obj, tuple):
+        return tuple(move(t, device) for t in obj)
+
+    if isinstance(obj, dict):
+        return {move(key, device): move(value, device) for key, value in obj.items()}
+
+    if hasattr(obj, "to"):
+        return obj.to(device)
+
+    return obj
+
+
 def dump(file: types.Path, obj: object) -> None:
-    torch.save(obj, file, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    torch.save(
+        move(obj, torch.device("cpu")), file, pickle_protocol=pickle.HIGHEST_PROTOCOL
+    )
 
 
 def load(file: types.Path) -> Any:
-    return torch.load(file)  # type: ignore
+    return torch.load(file, map_location=torch.device("cpu"))  # type: ignore

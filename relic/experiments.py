@@ -97,7 +97,11 @@ class Experiment:
             trials: List[Trial] = []
             path = cls.trial_path(root, hash, len(trials))
             while path.is_file():
-                trials.append(disk.load(path))
+                trial = disk.load(path)
+                if not isinstance(trial, Trial):
+                    trial = Trial(trial)
+                trials.append(trial)
+
                 path = cls.trial_path(root, hash, len(trials))
 
         except (EOFError, FileNotFoundError) as err:
@@ -204,26 +208,26 @@ class Experiment:
             trial = Trial(trial)
 
         assert "instance" in trial
-        assert trial["instance"] <= len(self)
+        assert trial.instance <= len(self)
 
-        if trial["instance"] < len(self):
+        if trial.instance < len(self):
             logger.debug(
                 "Updating trial. [trial: %s, experiment trials: %s]",
-                trial["instance"],
+                trial.instance,
                 len(self),
             )
-            self[trial["instance"]] = trial
+            self.trials[trial.instance] = trial
         else:
             logger.debug(
                 "Adding trial. [trial: %s, experiment trials: %s]",
-                trial["instance"],
+                trial.instance,
                 len(self),
             )
-            assert trial["instance"] == len(self)
+            assert trial.instance == len(self)
             self.trials.append(trial)
 
         if model_path is not None:
-            self._add_model(trial["instance"], model_path)
+            self._add_model(trial.instance, model_path)
 
         self.save()
 
@@ -258,9 +262,6 @@ class Experiment:
 
     def __getitem__(self, key: Union[int, slice]) -> Union[List[Trial], Trial]:
         return self.trials[key]
-
-    def __setitem__(self, index: int, value: Trial) -> None:
-        self.trials[index] = value
 
     def __hash__(self) -> int:
         return hash(self.hash)

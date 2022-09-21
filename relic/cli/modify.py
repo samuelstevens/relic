@@ -24,6 +24,7 @@ TYPE_MAP: Dict[str, Callable[[str], object]] = {
     "float": float,
     "str": str,
     "bool": _to_bool,
+    "dict": eval,
 }
 
 
@@ -287,7 +288,7 @@ def do_add(args: argparse.Namespace) -> int:
             )
         else:
             logging.info(
-                f"1. Add '{args.field}: {default_value}' to experiment {old_experiment}'s config. \n2. Re-hash the experiment and write to disk.\n3. Delete the old experiment."
+                f"1. Add '{args.field}: {default_value}' ({type(default_value)}) to experiment {old_experiment}'s config. \n2. Re-hash the experiment and write to disk.\n3. Delete the old experiment."
             )
 
     return 0

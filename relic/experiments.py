@@ -2,6 +2,7 @@ import dataclasses
 import hashlib
 import logging
 import multiprocessing
+import re
 import os
 import pathlib
 import shutil
@@ -58,12 +59,11 @@ class Experiment:
 
     def __post_init__(self) -> None:
         for i, trial in enumerate(self.trials):
-            if "instance" not in trial:
-                trial["instance"] = i
-            else:
-                assert (
-                    trial["instance"] == i
-                ), f"For experiment {self}, {trial['instance']} != {i}"
+            assert isinstance(trial, Trial), f"Trial {i} is not a Trial()!"
+
+            assert (
+                trial.instance == i
+            ), f"For experiment {self}, {trial.instance} != {i}"
 
     @classmethod
     def new(cls, config: types.Config, root: pathlib.Path) -> "Experiment":
@@ -81,10 +81,10 @@ class Experiment:
         file: types.Path
         message: str
 
-        def __init__(self, err: Exception, directory: types.Path):
+        def __init__(self, err: Exception, file: types.Path):
             self.err = err
-            self.directory = directory
-            self.message = f"Experiment directory {directory} is corrupted: {err}"
+            self.file = file
+            self.message = f"Experiment file {file} is corrupted: {err}"
 
         def __str__(self) -> str:
             return self.message
@@ -93,19 +93,28 @@ class Experiment:
     def load(cls, root: pathlib.Path, hash: str) -> "Experiment":
         try:
             config = disk.load(cls.config_path(root, hash))
+        except (EOFError, FileNotFoundError, RuntimeError) as err:
+            raise cls.LoadError(err, cls.config_path(root, hash))
 
-            trials: List[Trial] = []
-            path = cls.trial_path(root, hash, len(trials))
-            while path.is_file():
-                trial = disk.load(path)
-                if not isinstance(trial, Trial):
-                    trial = Trial(trial)
-                trials.append(trial)
+        trials: List[Trial] = []
 
-                path = cls.trial_path(root, hash, len(trials))
+        pattern = re.compile(str(cls.trial_dir(root, hash) / r"(\d+)\.trial"))
 
-        except (EOFError, FileNotFoundError) as err:
-            raise cls.LoadError(err, cls.directory(root, hash))
+        def get_trial_number(path):
+            return int(pattern.match(str(path)).group(1))
+
+        for trial_filepath in sorted(
+            cls.trial_dir(root, hash).iterdir(), key=get_trial_number
+        ):
+            try:
+                trial = Trial(disk.load(trial_filepath))
+            except (EOFError, FileNotFoundError, RuntimeError) as err:
+                logger.warning(
+                    "Loading trial failed! [trial: %s, err: %s]", trial_filepath, err
+                )
+                trial = Trial(instance=len(trials))
+
+            trials.append(trial)
 
         return cls(root, hash, config, trials)
 

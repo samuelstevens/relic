@@ -53,17 +53,27 @@ def test_load_from_filepath() -> None:
         assert experiment_from_file == experiment
 
 
-def test_load_missing_throws_error() -> None:
+def test_load_bad_trial_makes_empty_trial() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
+        project = projects.Project.new(root)
 
-        hash = experiments.Experiment.hash_from_config({})
+        experiment = experiments.Experiment.new(config={}, root=project.root)
+        assert experiment.exists(project.root, experiment.hash)
 
-        with pytest.raises(experiments.Experiment.LoadError):
-            experiments.Experiment.load(root, hash)
+        # Just write the file
+        with open(
+            experiment.trial_path(experiment.root, experiment.hash, 1), "wb"
+        ) as fd:
+            fd.write(b"")
+
+        loaded = experiments.Experiment.load(project.root, experiment.hash)
+
+        assert len(loaded) == 1
+        assert loaded[0].instance == 0
 
 
-def test_load_corrupted_throws_error() -> None:
+def test_load_missing_config() -> None:
     with tempfile.TemporaryDirectory() as root_name:
         root = pathlib.Path(root_name)
         project = projects.Project.new(root)

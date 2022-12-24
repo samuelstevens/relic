@@ -1,11 +1,12 @@
 import argparse
+import functools
 import os
 import pathlib
 import sys
 import typing
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Set
 
-from .. import experiments, json, projects
+from .. import disk, experiments, json, projects, types
 from .lib import logging
 
 if sys.version_info >= (3, 8):
@@ -19,7 +20,9 @@ Trial conflict resolution.
 Sometimes we will have two trials that are in conflict. Which trial should we pick?
 """
 
-ConflictStrategy = Literal["longer", "src", "dst", "none", "both", "keep"]
+ConflictStrategy = Literal[
+    "longer", "src", "dst", "none", "both", "keep", "unique-seed"
+]
 ConflictFn = Callable[[experiments.Trial, experiments.Trial], bool]
 
 
@@ -60,7 +63,6 @@ conflict_choices: Dict[ConflictStrategy, ConflictFn] = {
     "src": use_source_trial,
     "dst": use_destination_trial,
     "none": no_resolution,
-    "keep": no_resolution,
 }
 
 
@@ -147,6 +149,65 @@ def add_extra_trials(
         dst_exp.add_trial(trial, model_path=original_model_path)
 
 
+@functools.singledispatch
+def get_seed(*args: object) -> int:
+    raise ValueError(args)
+
+
+@get_seed.register
+def _(path: pathlib.Path) -> int:
+    assert isinstance(path, pathlib.Path), type(path)
+
+    model = disk.load(path)
+    assert isinstance(model, dict), type(model)
+    assert "fastfood_seed" in model, model.keys()
+
+    seed = model["fastfood_seed"]
+    assert isinstance(seed, int), type(seed)
+
+    return seed
+
+
+@get_seed.register
+def _(exp: experiments.Experiment, trial: int) -> int:
+    return get_seed(exp.model_path(trial))
+
+
+def get_existing_seeds(exp: experiments.Experiment) -> Set[int]:
+    seeds = set()
+    for i, trial in enumerate(exp):
+        if not exp.model_exists(i):
+            continue
+
+        seeds.add(get_seed(exp, i))
+
+    return seeds
+
+
+def add_unique_seed_trials(
+    src_exp: experiments.Experiment, dst_exp: experiments.Experiment
+) -> None:
+    # Only keep trials with a seed that is not already in the experiment
+    existing_seeds = get_existing_seeds(dst_exp)
+
+    for i, src_trial in enumerate(src_exp):
+        src_model_path = src_exp.model_path(i)
+        if not os.path.exists(src_model_path):
+            continue
+
+        src_seed = get_seed(src_model_path)
+        if src_seed in existing_seeds:
+            logging.debug(
+                "Skipping trial because seed already seen. [trial %d, seed: %d]",
+                i,
+                src_seed,
+            )
+            continue
+
+        del src_trial["instance"]
+        dst_exp.add_trial(src_trial, src_model_path)
+
+
 def merge_source_exp(
     src_exp: experiments.Experiment,
     dst_proj: projects.Project,
@@ -176,6 +237,8 @@ def merge_source_exp(
             del src_trial["instance"]
             dst_exp.add_trial(src_trial, original_model_path)
 
+    elif conflict_strategy == "unique-seed":
+        add_unique_seed_trials(src_exp, dst_exp)
     else:
         assert conflict_strategy in conflict_choices
         conflict_fn = conflict_choices[conflict_strategy]

@@ -22,7 +22,6 @@ class TType(preface.SumType):
     Boolean = "bool"
     Nil = "NoneType"
     String = "str"
-    Regex = "re"
     # parens
     LeftParen = "("
     RightParen = ")"
@@ -137,11 +136,8 @@ class Lexer:
             if ch in string.digits:
                 return lex_num(self, ch)
 
-            if ch == "'":
+            if ch in ("'", '"'):
                 return lex_str(self, ch)
-
-            if ch == "|":
-                return lex_regex(self, ch)
 
             raise LexError(self, ch)
 
@@ -192,41 +188,22 @@ def lex_word(lexer: Lexer, start: str) -> Token:
 
 
 def lex_str(lexer: Lexer, start: str) -> Token:
-    assert start == "'"
+    assert start in ("'", '"')
 
     pos = lexer.pos - 1
 
     contents = []
 
-    while not lexer.at_end() and lexer.peek() != "'":
+    while not lexer.at_end() and lexer.peek() != start:
         ch, _ = lexer.advance()
         contents.append(ch)
 
-    lexer.advance()  # consume the ' character.
+    lexer.advance()  # consume the closing quote character.
 
     if lexer.at_end():
         raise LexError(lexer, "EOF")
 
     return Token(TType.String, "".join(contents), pos)
-
-
-def lex_regex(lexer: Lexer, start: str) -> Token:
-    assert start == "|"
-
-    pos = lexer.pos - 1
-
-    contents = []
-
-    while not lexer.at_end() and lexer.peek() != "|":
-        ch, _ = lexer.advance()
-        contents.append(ch)
-
-    lexer.advance()  # consume the / character.
-
-    if lexer.at_end():
-        raise LexError(lexer, "EOF")
-
-    return Token(TType.Regex, "".join(contents), pos)
 
 
 class LexError(Exception):

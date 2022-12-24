@@ -223,17 +223,6 @@ class Nil(Expr):
         return "None"
 
 
-class Regex(Expr):
-    def __init__(self, pattern: str) -> None:
-        self.pattern = pattern
-
-    def __call__(self, arg: RuntimeObj) -> str:
-        return self.pattern
-
-    def __repr__(self) -> str:
-        return f"|{self.pattern}|"
-
-
 class Equal(Expr):
     def __init__(self, left: Expr, right: Expr) -> None:
         self.left = left
@@ -247,15 +236,21 @@ class Equal(Expr):
 
 
 class Like(Expr):
-    def __init__(self, expr: Expr, regex: Expr) -> None:
-        if not isinstance(regex, Regex):
+    def __init__(self, expr: Expr, pattern: Expr) -> None:
+        if not isinstance(pattern, String):
             raise TypeError(
-                f"Expression {regex} must be a regular expression, not {type(regex)}!"
+                f"Expression {regex} must be a string, not {type(regex)}!"
             )
 
         self.expr = expr
-        # For performance optimizations, we cache the regex pattern so it doesn't need to be parsed each time the Like expression is called.
-        self.regex = re.compile(regex("dummy"))
+
+        # For performance optimizations, we cache the regex pattern so it 
+        # doesn't need to be parsed each time the Like expression is called.
+
+        # The None is the runtime object we are passing to the __call__ 
+        # signature of the String expression
+
+        self.regex = re.compile(pattern(None))
 
     def __call__(self, arg: RuntimeObj) -> bool:
         value = str(self.expr(arg))

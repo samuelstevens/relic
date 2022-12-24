@@ -128,10 +128,6 @@ def parse_string(parser: Parser, token: Token, cls: object) -> ast.String:
     return ast.String(token.literal)
 
 
-def parse_regex(parser: Parser, token: Token, cls: object) -> ast.Regex:
-    return ast.Regex(token.literal)
-
-
 FN_PARSE_TABLE = {
     # variadic args
     TType.And: (parse_variadic_arg_fn, ast.And),
@@ -158,7 +154,6 @@ LITERAL_PARSE_TABLE = {
     TType.Identifier: (parse_identifier, ast.Identifier),
     TType.Boolean: (parse_boolean, ast.Boolean),
     TType.String: (parse_string, ast.String),
-    TType.Regex: (parse_regex, ast.Regex),
     TType.Nil: (parse_none, ast.Nil),
 }
 

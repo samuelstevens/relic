@@ -12,18 +12,18 @@ import torch
 from . import types
 
 
-def move(obj, device):
+def move(obj: types.T, device: torch.device) -> types.T:
     if isinstance(obj, list):
-        return [move(t, device) for t in obj]
+        return [move(t, device) for t in obj]  # type: ignore
 
     if isinstance(obj, tuple):
-        return tuple(move(t, device) for t in obj)
+        return tuple(move(t, device) for t in obj)  # type: ignore
 
     if isinstance(obj, dict):
-        return {move(key, device): move(value, device) for key, value in obj.items()}
+        return {move(key, device): move(value, device) for key, value in obj.items()}  # type: ignore
 
     if hasattr(obj, "to"):
-        return obj.to(device)
+        return obj.to(device)  # type: ignore
 
     return obj
 

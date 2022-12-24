@@ -48,7 +48,6 @@ class Project:
         new_dir = self._root / f"v{self._versions}"
 
         new_dir.mkdir(exist_ok=True)
-        (new_dir / ".keep").touch()
 
     def use_version(self, version: int) -> None:
         if version > self._versions:

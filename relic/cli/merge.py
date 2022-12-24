@@ -7,7 +7,7 @@ import typing
 from typing import Callable, Dict, Optional, Set
 
 from .. import disk, experiments, json, projects, types
-from .lib import logging
+from .lib import logging, parallel
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -273,8 +273,13 @@ def merge_source_proj(
     dst_proj: projects.Project,
     conflict_strategy: ConflictStrategy,
 ) -> None:
-    for src_exp in experiments.load_all(src_proj):
-        if not experiments.Experiment.exists(dst_proj.root, src_exp.hash):
-            add_experiment(src_exp, dst_proj)
-        else:
-            merge_source_exp(src_exp, dst_proj, conflict_strategy)
+    try:
+        pool = parallel.BoundedExecutor()
+        for src_exp in experiments.load_all(src_proj):
+            if not experiments.Experiment.exists(dst_proj.root, src_exp.hash):
+                pool.submit(add_experiment, src_exp, dst_proj)
+            else:
+                pool.submit(merge_source_exp,src_exp, dst_proj, conflict_strategy)
+        pool.finish()
+    finally:
+        pool.shutdown()

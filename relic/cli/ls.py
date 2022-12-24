@@ -88,7 +88,7 @@ class Table:
         exps: Sequence[experiments.Experiment],
         special_handlers: Sequence[Handler],
         config_handlers: Sequence[Handler],
-        metric_handlers: Sequence[Handler],
+        show_handlers: Sequence[Handler],
         orderings: Sequence[Ordering],
     ) -> None:
 
@@ -104,7 +104,7 @@ class Table:
                 field, value = handler(experiment)
                 columns[field].append(value)
 
-            for handler in metric_handlers:
+            for handler in show_handlers:
                 field, value = handler(experiment)
                 columns[field].append(value)
 
